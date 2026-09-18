@@ -1,0 +1,327 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background-color: #000;
+  font-family: 'Orbitron', 'Segoe UI', sans-serif;
+}
+
+.game-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: radial-gradient(circle, #001 0%, #000 100%);
+}
+
+.game-wrapper {
+  position: relative;
+  transition: filter 0.3s;
+}
+
+.game-wrapper.slow-mo {
+  filter: sepia(0.3) hue-rotate(-20deg) brightness(0.9) saturate(1.5);
+}
+
+.game-canvas {
+  border: 2px solid #00ffff;
+  background-color: #000;
+  box-shadow: 0 0 40px rgba(0, 255, 255, 0.2);
+}
+
+.ui {
+  position: absolute;
+  top: 15px;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 10;
+}
+
+.stats-main {
+  text-align: left;
+  background: rgba(0, 0, 40, 0.4);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border-left: 2px solid rgba(0, 255, 255, 0.5);
+  width: 180px;
+  backdrop-filter: blur(2px);
+}
+
+.score { color: #fff; font-size: 16px; font-weight: bold; }
+.highscore { color: #00aaaa; font-size: 11px; }
+
+.hp-row, .bomb-row, .slow-row, .hyper-row {
+  color: #fff;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.slow-row .gauge-bg, .hyper-row .gauge-bg {
+  display: inline-block;
+  width: 70px;
+  height: 6px;
+  background: #111;
+  border: 1px solid rgba(0, 255, 255, 0.5);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.slow-row .gauge-fill {
+  height: 100%;
+  background: #00ffff;
+  box-shadow: 0 0 5px #00ffff;
+}
+
+.hyper-row .gauge-fill.hyper {
+  background: #ffaa00;
+  box-shadow: 0 0 5px #ffaa00;
+}
+
+.game-wrapper.hyper-mode {
+  filter: contrast(1.2) brightness(1.1);
+  box-shadow: 0 0 60px rgba(255, 170, 0, 0.3);
+}
+
+.stats-side {
+  text-align: right;
+  background: rgba(0, 0, 40, 0.4);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border-right: 2px solid rgba(0, 255, 255, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.stage-display {
+  color: #ffff00;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.weapon-stats {
+  font-size: 11px;
+  color: #888;
+  margin-top: 4px;
+}
+
+.weapon-stats .active {
+  color: #00ffff;
+  font-weight: bold;
+}
+
+/* ダイアログシステム */
+.dialogue-box {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 420px;
+  background: rgba(0, 0, 20, 0.8);
+  border: 1px solid #00ffff;
+  border-radius: 4px;
+  display: flex;
+  padding: 8px 12px;
+  color: #fff;
+  z-index: 100;
+  animation: slide-up 0.3s ease-out;
+  backdrop-filter: blur(3px);
+  pointer-events: none;
+}
+
+@keyframes slide-up {
+  from { transform: translate(-50%, 20px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+.dialogue-box.boss {
+  border-color: #ff0000;
+  background: rgba(40, 0, 0, 0.8);
+}
+
+.dialogue-box .portrait {
+  width: 40px;
+  height: 40px;
+  background: #111;
+  border: 1px solid #00ffff;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.dialogue-box.boss .portrait { border-color: #ff0000; }
+
+.dialogue-box .name {
+  font-weight: bold;
+  color: #00ffff;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.dialogue-box.boss .name { color: #ff0000; }
+
+.dialogue-box .text {
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 40px;
+  border: 2px solid #00ffff;
+  color: #fff;
+  width: 440px;
+  z-index: 200;
+}
+
+.overlay h1 {
+  font-size: 24px;
+  color: #00ffff;
+  text-shadow: 0 0 10px #00ffff;
+}
+
+.feature-list {
+  text-align: left;
+  margin: 20px 0;
+  font-size: 14px;
+}
+
+.feature-list li {
+  margin-bottom: 8px;
+}
+
+.overlay button {
+  padding: 15px 40px;
+  font-size: 20px;
+  background: #00ffff;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.combo-display {
+  color: #ff00ff;
+  font-size: 32px;
+  font-weight: bold;
+  text-shadow: 0 0 10px #ff00ff;
+  margin-top: 10px;
+}
+
+
+/* GitHub Pages / mobile-friendly viewport scaling */
+.game-container {
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  padding: 0;
+}
+
+.game-wrapper {
+  width: min(600px, 75dvh, 100vw);
+  aspect-ratio: 3 / 4;
+  max-height: 100dvh;
+}
+
+.game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.overlay {
+  width: min(440px, calc(100% - 24px));
+  padding: clamp(18px, 5vw, 40px);
+  max-height: calc(100% - 24px);
+  overflow: auto;
+}
+
+.overlay h1 {
+  font-size: clamp(18px, 4vw, 24px);
+}
+
+.touch-controls {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 120;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.touch-dpad,
+.touch-actions {
+  position: absolute;
+  bottom: 3%;
+  pointer-events: auto;
+}
+
+.touch-dpad {
+  left: 3%;
+  width: 128px;
+  height: 128px;
+}
+
+.touch-actions {
+  right: 3%;
+  width: 162px;
+  height: 142px;
+}
+
+.touch-btn {
+  position: absolute;
+  border: 1px solid rgba(0, 255, 255, 0.75);
+  background: rgba(0, 12, 30, 0.62);
+  color: #fff;
+  border-radius: 50%;
+  font-weight: 700;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.22);
+}
+
+.touch-btn:active {
+  background: rgba(0, 255, 255, 0.38);
+}
+
+.touch-dpad .touch-btn { width: 48px; height: 48px; font-size: 18px; }
+.touch-dpad .up { left: 40px; top: 0; }
+.touch-dpad .left { left: 0; top: 40px; }
+.touch-dpad .down { left: 40px; top: 80px; }
+.touch-dpad .right { left: 80px; top: 40px; }
+
+.touch-actions .touch-btn { width: 56px; height: 56px; font-size: 10px; }
+.touch-actions .fire { width: 70px; height: 70px; right: 0; bottom: 32px; font-size: 12px; border-color: rgba(255, 80, 80, 0.9); }
+.touch-actions .dash { right: 72px; bottom: 0; }
+.touch-actions .slow { right: 96px; bottom: 62px; }
+.touch-actions .bomb { right: 37px; bottom: 86px; }
+.touch-actions .hyper { right: 100px; bottom: 8px; border-color: rgba(255, 170, 0, 0.9); }
+
+@media (pointer: coarse), (hover: none) {
+  .touch-controls { display: block; }
+  .dialogue-box { bottom: 19%; }
+}
+
+@media (max-width: 520px) {
+  .ui { padding: 0 8px; top: 8px; }
+  .stats-main { width: 145px; padding: 6px 8px; }
+  .score { font-size: 13px; }
+  .stage-display { font-size: 14px; }
+  .weapon-stats { font-size: 9px; }
+  .dialogue-box { width: calc(100% - 24px); font-size: 12px; }
+  .dialogue-box .text { font-size: 12px; }
+}
