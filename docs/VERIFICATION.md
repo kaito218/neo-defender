@@ -65,3 +65,21 @@
 公開用ファイルを確認する場合は`npm run build`の後に`npm run serve`を実行し、http://127.0.0.1:4173/neo-defender/ を開く。serveはローカルPC限定で待ち受ける。
 
 バックアップは作業タスク内work/neo-defender-backup。作業前のGitコミットはf9e66a2。変更はローカル作業ツリーに保存され、コミット/pushは行っていない。
+
+## 2026-09-20: iPhone launch visibility and audio
+
+- Split HANGAR into a scrolling ship/wingmate region and a persistent launch footer.
+- Japanese 出撃する button shows selected ship and story stage / score attack mode.
+- Added six original synthwave BGM tracks and layered shot, explosion, missile,
+  bomb, warning, hyper and result effects. Added sound check and blocked-audio recovery.
+- Audio initialization uses click/touchend/keydown and isolates audio failures from gameplay.
+- Local static preview serves WAV MIME type and HTTP byte ranges.
+
+Validation: production build and ESLint passed; all 13 automated tests passed,
+including audio pause/resume, blocked playback recovery, failure isolation and PCM validation.
+Chromium in-app browser: launch button entirely visible at 844x390 and 667x300;
+launch proceeds through briefing into active gameplay, with no console errors.
+Title reports SOUND ON after interaction. WAV byte-range request returned 206 with
+correct Content-Range and a 44-byte RIFF header; HEAD returned 200.
+Real iPhone Safari playback/touch and physical speaker output remain unverified.
+No remote deployment was performed.

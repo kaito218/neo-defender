@@ -2,25 +2,20 @@ import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import './App.css';
 import { W, H } from './game/model';
-import type { Action, Mode, Save, Settings, Snapshot, ShipId } from './game/model';
+import type { Action, Mode, Save, Settings, Snapshot } from './game/model';
 import { Game } from './game/Game';
 import { InputManager } from './game/InputManager';
 import { AudioManager } from './game/Audio';
-import { drawShip, render } from './game/Renderer';
+import type { AudioStatus } from './game/Audio';
+import { Hangar } from './ui/Hangar';
+import { render } from './game/Renderer';
 import { loadSave, writeSave } from './game/SaveData';
-import { ships, shipById } from './data/ships';
 import { stages } from './data/stages';
-import { allies } from './data/allies';
 import { weaponOrder, weapons } from './data/weapons';
 import { choices, endingText } from './data/story';
 
 type Screen = 'title' | 'hangar' | 'stages' | 'how' | 'settings' | 'game' | 'pause';
 const formatTime = (t: number) => `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
-function ShipPreview({ id }: { id: ShipId }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => { const c = ref.current?.getContext('2d'); if (c) { c.clearRect(0, 0, 250, 100); drawShip(c, 130, 50, id, 2.2); } }, [id]);
-  return <canvas ref={ref} width={250} height={100} className="ship-preview" aria-label={`${shipById(id).name}の機体デザイン`} />;
-}
 function Meter({ label, value, color }: { label: string; value: number; color?: string }) { return <div className="meter"><span>{label}</span><i><b style={{ width: `${Math.max(0, Math.min(100, value))}%`, background: color }} /></i></div>; }
 
 export default function App() {
@@ -34,6 +29,7 @@ export default function App() {
   const [toast, setToast] = useState('');
   const [device, setDevice] = useState('keyboard');
   const [full, setFull] = useState(false);
+  const [audioStatus, setAudioStatus] = useState<AudioStatus>('idle');
   const canvas = useRef<HTMLCanvasElement>(null);
   const root = useRef<HTMLDivElement>(null);
   const game = useRef<Game | null>(null);
@@ -90,7 +86,7 @@ export default function App() {
       wasShot = state.shoot;
       sound.update(dt);
       const ctx = canvas.current?.getContext('2d'); if (ctx) render(ctx, game.current, elapsed);
-      if (publish > .1) { publish = 0; setDevice(controls.device); if (game.current) setHud(game.current.snapshot()); }
+      if (publish > .1) { publish = 0; setDevice(controls.device); setAudioStatus(sound.status); if (game.current) setHud(game.current.snapshot()); }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -104,10 +100,9 @@ export default function App() {
     onPointerCancel: (e: ReactPointerEvent<HTMLButtonElement>) => input.current?.release(e.pointerId),
     onLostPointerCapture: (e: ReactPointerEvent<HTMLButtonElement>) => input.current?.release(e.pointerId),
   });
-  const selected = shipById(save.selected);
   const choice = hud ? choices[hud.stage as 2 | 4] : undefined;
   const ending = endingText(game.current?.route ?? {});
-  return <div className="app" ref={root} onPointerDown={() => audio.current?.unlock()}>
+  return <div className="app" ref={root} onClickCapture={() => audio.current?.unlock()} onTouchEndCapture={() => audio.current?.unlock()} onKeyDownCapture={() => audio.current?.unlock()}>
     <div className="viewport">
       <canvas ref={canvas} width={W} height={H} className="game-canvas" aria-label="NEO DEFENDER 横スクロールゲーム画面" onPointerDown={moveStart} onPointerMove={e => input.current?.move(e.pointerId, point(e))} onPointerUp={e => input.current?.release(e.pointerId)} onPointerCancel={e => input.current?.release(e.pointerId)} onLostPointerCapture={e => input.current?.release(e.pointerId)} />
       <div className="vignette" />
@@ -118,18 +113,15 @@ export default function App() {
           <button className="primary" onClick={() => { setPending('story'); navigate('hangar'); }}><span>01</span> STORY MODE <b>↗</b></button>
           <button onClick={() => { setPending('attack'); navigate('hangar'); }}><span>02</span> SCORE ATTACK <b>↗</b></button>
           <div className="menu-grid"><button onClick={() => { setPending(null); navigate('hangar'); }}>HANGAR</button><button onClick={() => navigate('stages')}>STAGE SELECT</button><button onClick={() => navigate('how')}>HOW TO PLAY</button><button onClick={() => { backRef.current = 'title'; navigate('settings'); }}>SETTINGS</button></div>
-          <button className="full-button" onClick={fullscreen}>⛶ {full ? 'EXIT FULL SCREEN' : 'FULL SCREEN'}</button>
+          <div className="title-utilities"><button className="full-button" onClick={fullscreen}>⛶ {full ? 'EXIT FULL SCREEN' : 'FULL SCREEN'}</button><button className="sound-button" onClick={() => audio.current?.preview()}>♫ {audioStatus === 'playing' ? 'SOUND ON' : '音楽を再生'}</button></div>
         </nav>
-        <footer className="title-footer"><span><i /> ALL SYSTEMS READY</span><span>HI SCORE <strong>{save.highs.attack.toLocaleString().padStart(7, '0')}</strong></span><span>HORIZONTAL / v2.0</span></footer>
+        <footer className="title-footer"><span><i /> ALL SYSTEMS READY</span><span>HI SCORE <strong>{save.highs.attack.toLocaleString().padStart(7, '0')}</strong></span><span>HORIZONTAL / v2.1</span></footer>
         <div className="hero-label"><span>YOUR NEXT SORTIE</span><b>KESTREL</b><small>TYPE A · MULTIROLE INTERCEPTOR</small></div>
       </main>}
-      {screen === 'hangar' && <section className="panel sub-panel"><header><div><div className="kicker">FLEET MANAGEMENT</div><h2>HANGAR<span>機体格納庫</span></h2></div><button onClick={() => navigate('title')}>← BACK</button></header>
-        <div className="ship-grid">{ships.map(ship => { const unlocked = save.unlocked.includes(ship.id); return <button key={ship.id} disabled={!unlocked} className={`ship-card ${save.selected === ship.id ? 'selected' : ''}`} onClick={() => { saveRef.current.selected = ship.id; persist(); }}><small>TYPE {ship.id} <span>{unlocked ? save.selected === ship.id ? 'SELECTED' : 'AVAILABLE' : 'LOCKED'}</span></small><ShipPreview id={ship.id} /><h3>{ship.name}</h3><p>{ship.role}</p><div className="ship-spec">HP {ship.hp} · SPD {ship.speed}<br />{ship.weapon}</div><p className="unlock-note">{unlocked ? ship.detail : ship.unlock}</p></button>; })}</div>
-        <div className="hangar-bottom"><div><h3>WINGMATES <span>加入済みパイロット</span></h3><div className="ally-list">{Object.entries(allies).map(([id, ally]) => <div key={id} className={save.allies.includes(id as keyof typeof allies) ? 'available' : ''}><b>{ally.name}</b> {ally.role}<small>{ally.detail}</small></div>)}</div></div><div className="launch-box"><p>SELECTED / <strong>{selected.name}</strong></p>{pending === 'story' && <><button className="primary" onClick={() => launch('story', save.nextStage)}>{save.nextStage > 1 ? `CONTINUE / STAGE ${save.nextStage}` : 'LAUNCH / 出撃'} →</button>{save.nextStage > 1 && <button onClick={() => launch('story', 1)}>NEW SORTIE / STAGE 1</button>}</>}{pending === 'attack' && <button className="primary" onClick={() => launch('attack')}>SCORE ATTACK / 出撃 →</button>}{!pending && <button className="primary" onClick={() => launch('story', save.nextStage)}>STORY / 出撃 →</button>}</div></div>
-      </section>}
+      {screen === 'hangar' && <Hangar save={save} mode={pending} onBack={() => navigate('title')} onSelect={id => { saveRef.current.selected = id; persist(); }} onLaunch={launch} />}
       {screen === 'stages' && <section className="panel sub-panel"><header><div><div className="kicker">OPERATION CHART</div><h2>STAGE SELECT<span>到達した戦域へ</span></h2></div><button onClick={() => navigate('title')}>← BACK</button></header><div className="stage-list">{stages.map(stage => <button key={stage.id} disabled={stage.id > 1 && !save.cleared.includes(stage.id - 1) && !save.cleared.includes(stage.id)} onClick={() => launch('story', stage.id)}><span className="stage-number">{String(stage.id).padStart(2, '0')}</span><span><b>{stage.name}</b><small>{stage.area}</small></span><span>{save.cleared.includes(stage.id) ? 'CLEARED ✓' : '→'}</span></button>)}</div><p className="muted">機体はHANGARで選択。各ステージの開始地点から出撃します。</p></section>}
       {screen === 'how' && <section className="panel sub-panel"><header><div><div className="kicker">PILOT FIELD MANUAL</div><h2>HOW TO PLAY<span>飛ぶ、選ぶ、生き抜く。</span></h2></div><button onClick={() => navigate('title')}>← BACK</button></header><div className="manual-grid"><article><h3>01 / KEYBOARD</h3><dl><dt>WASD / 方向キー</dt><dd>上下左右に移動</dd><dt>SPACE</dt><dd>射撃</dd><dt>SHIFT / X</dt><dd>ダッシュ / ボム</dd><dt>Z / C</dt><dd>スロー（長押し）/ ハイパー</dd><dt>Q・E / ESC</dt><dd>武器切替 / ポーズ</dd></dl></article><article><h3>02 / TOUCH</h3><p>画面を触れた方向へ、機体が速度を保って移動。指を離すと停止します。</p><p>右下の特殊ボタンは、移動と同時に押せます。AUTO SHOTは設定から変更できます。</p><p>横向き推奨。追従オフセットは設定で調整できます。</p></article><article><h3>03 / GAMEPAD</h3><dl><dt>左スティック / 十字キー</dt><dd>移動</dd><dt>A / B / X / Y</dt><dd>射撃 / ボム / ダッシュ / ハイパー</dd><dt>LB / RB / START</dt><dd>スロー / 武器切替 / ポーズ</dd></dl><p>メニューはスティックで選択、Aで決定。接続後にボタンを押して認識させてください。</p></article></div><div className="manual-tips"><b>TACTICS</b> 自機中央の白点が敵弾の当たり判定。ダッシュ中は無敵。敵弾の近くを回避すると加点。撃破をつないでコンボを維持し、ゲージ100%でHYPERを発動。仲間は被弾すると7秒後に帰還します。</div><div className="weapon-guide">{weaponOrder.map(w => <div key={w}><b style={{ color: weapons[w].color }}>{w}</b><span>{weapons[w].detail}</span></div>)}</div></section>}
-      {screen === 'settings' && <section className="panel sub-panel settings-panel"><header><div><div className="kicker">SYSTEM CONFIGURATION</div><h2>SETTINGS<span>設定は自動保存されます</span></h2></div><button onClick={() => navigate(backRef.current)}>← BACK</button></header><div className="settings-grid"><label>AUTO SHOT<span>通常射撃を自動化</span><button aria-pressed={save.settings.autoShot} onClick={() => updateSettings({ autoShot: !save.settings.autoShot })}>{save.settings.autoShot ? 'ON' : 'OFF'}</button></label><label>TOUCH OFFSET<span>指の右側への距離：{save.settings.touchOffset}</span><input aria-label="タッチ追従オフセット" type="range" min="0" max="100" step="4" value={save.settings.touchOffset} onChange={e => updateSettings({ touchOffset: +e.target.value })} /></label><label>MUSIC<span>BGM：{Math.round(save.settings.music * 100)}%</span><input aria-label="BGM音量" type="range" min="0" max="1" step=".01" value={save.settings.music} onChange={e => updateSettings({ music: +e.target.value })} /></label><label>SOUND EFFECTS<span>効果音：{Math.round(save.settings.sfx * 100)}%</span><input aria-label="効果音音量" type="range" min="0" max="1" step=".01" value={save.settings.sfx} onChange={e => updateSettings({ sfx: +e.target.value })} /></label><label>REDUCED MOTION<span>画面揺れ・フラッシュを抑える</span><button aria-pressed={save.settings.reducedMotion} onClick={() => updateSettings({ reducedMotion: !save.settings.reducedMotion })}>{save.settings.reducedMotion ? 'ON' : 'OFF'}</button></label><label>STORY DIFFICULTY<span>ストーリーの敵耐久・速度</span><select aria-label="難易度" value={save.settings.difficulty} onChange={e => updateSettings({ difficulty: e.target.value as Settings['difficulty'] })}><option>EASY</option><option>NORMAL</option><option>HARD</option></select></label></div><p className="muted">入力方式は自動切替。セーブはこのブラウザに保存されます。ストーリーはステージ開始地点から再開できます。</p></section>}
+      {screen === 'settings' && <section className="panel sub-panel settings-panel"><header><div><div className="kicker">SYSTEM CONFIGURATION</div><h2>SETTINGS<span>設定は自動保存されます</span></h2></div><button onClick={() => navigate(backRef.current)}>← BACK</button></header><div className="settings-grid"><label>AUTO SHOT<span>通常射撃を自動化</span><button aria-pressed={save.settings.autoShot} onClick={() => updateSettings({ autoShot: !save.settings.autoShot })}>{save.settings.autoShot ? 'ON' : 'OFF'}</button></label><label>TOUCH OFFSET<span>指の右側への距離：{save.settings.touchOffset}</span><input aria-label="タッチ追従オフセット" type="range" min="0" max="100" step="4" value={save.settings.touchOffset} onChange={e => updateSettings({ touchOffset: +e.target.value })} /></label><label>MUSIC<span>BGM：{Math.round(save.settings.music * 100)}%</span><input aria-label="BGM音量" type="range" min="0" max="1" step=".01" value={save.settings.music} onChange={e => updateSettings({ music: +e.target.value })} /></label><label>SOUND EFFECTS<span>効果音：{Math.round(save.settings.sfx * 100)}%</span><input aria-label="効果音音量" type="range" min="0" max="1" step=".01" value={save.settings.sfx} onChange={e => updateSettings({ sfx: +e.target.value })} /></label><label>REDUCED MOTION<span>画面揺れ・フラッシュを抑える</span><button aria-pressed={save.settings.reducedMotion} onClick={() => updateSettings({ reducedMotion: !save.settings.reducedMotion })}>{save.settings.reducedMotion ? 'ON' : 'OFF'}</button></label><label>STORY DIFFICULTY<span>ストーリーの敵耐久・速度</span><select aria-label="難易度" value={save.settings.difficulty} onChange={e => updateSettings({ difficulty: e.target.value as Settings['difficulty'] })}><option>EASY</option><option>NORMAL</option><option>HARD</option></select></label></div><div className="sound-check"><button onClick={() => audio.current?.preview()}>♫ 音楽・効果音を確認</button><span>オリジナル・シンセウェーブ / {audio.current?.trackName}</span></div><p className="muted">入力方式は自動切替。セーブはこのブラウザに保存されます。ストーリーはステージ開始地点から再開できます。</p></section>}
       {(screen === 'game' || screen === 'pause') && hud && <>
         <div className="hud"><div className="hud-left"><div className="hud-label">{game.current?.ship.name} <span>HP {hud.hp}/{hud.maxHp}</span></div><div className="hp-segments">{Array.from({ length: hud.maxHp }, (_, i) => <i key={i} className={i < hud.hp ? 'lit' : ''} />)}</div><span className="weapon-name" style={{ color: weapons[hud.weapon].color }}>{hud.weapon} <small>LV.{hud.level}</small></span></div><div className="hud-center"><span>{hud.mode === 'story' ? `STAGE 0${hud.stage} / ${hud.title}` : `SCORE ATTACK / ${hud.tier}`}</span><b>{hud.score.toLocaleString().padStart(7, '0')}</b></div><div className="hud-right"><span>{formatTime(hud.time)} <strong>{hud.combo > 1 ? `×${hud.combo} COMBO` : ''}</strong></span><button aria-label="ポーズ" onClick={() => navigate('pause')}>Ⅱ</button></div></div>
         {hud.boss && <div className="boss-hud"><div>{hud.boss.name}<span>PHASE {hud.boss.phase}</span></div><i><b style={{ width: `${hud.boss.hp * 100}%` }} /></i></div>}
@@ -148,6 +140,7 @@ export default function App() {
         {screen === 'game' && (hud.status === 'over' || hud.status === 'ending') && <div className="modal"><section className="dialog-card wide result-card"><div className="kicker">{hud.status === 'ending' ? 'ALL OPERATIONS COMPLETE' : 'SIGNAL LOST / MISSION REPORT'}</div><h2>{hud.status === 'ending' ? 'GAME CLEAR' : 'MISSION FAILED'}</h2>{hud.status === 'ending' && <><h3>{ending.title}</h3><p>{ending.text}</p></>}<div className="result-score"><small>TOTAL SCORE</small>{hud.score.toLocaleString()}</div><div className="result-grid"><div><small>SURVIVAL TIME</small><b>{formatTime(hud.time)}</b></div><div><small>ENEMIES DESTROYED</small><b>{hud.kills}</b></div><div><small>MAX COMBO</small><b>{hud.maxCombo}</b></div><div><small>BOSSES DESTROYED</small><b>{hud.bosses}</b></div><div><small>USED SHIP</small><b>{game.current?.ship.name}</b></div><div><small>HIGH SCORE</small><b>{save.highs[hud.mode].toLocaleString()}</b></div></div><div className="row-actions"><button className="primary" onClick={() => launch(hud.mode, game.current?.startStage ?? 1)}>RETRY</button><button onClick={quit}>RETURN TO BASE</button></div></section></div>}
       </>}
       {screen === 'pause' && <div className="modal"><section className="panel pause-panel"><div className="kicker">FLIGHT SUSPENDED</div><h2>PAUSED</h2><button className="primary" onClick={() => navigate('game')}>CONTINUE</button><button onClick={() => launch(game.current?.mode ?? 'story', game.current?.stage ?? 1)}>RESTART STAGE</button><button onClick={() => { backRef.current = 'pause'; navigate('settings'); }}>SETTINGS</button><button onClick={fullscreen}>{full ? 'EXIT FULL SCREEN' : 'FULL SCREEN'}</button><button onClick={quit}>QUIT / 帰還</button></section></div>}
+      {screen === 'game' && hud?.status === 'playing' && audioStatus === 'blocked' && <button className="audio-recovery" onClick={() => audio.current?.unlock()}>♫ タップして音声を再開</button>}
       {toast && <div className="toast" role="status">{toast}</div>}
       <span className="input-indicator">{device.toUpperCase()}</span>
     </div>

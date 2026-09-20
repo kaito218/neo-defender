@@ -125,3 +125,46 @@ test('a quick touch button press between frames is delivered once', () => {
   assert.equal(i.sample().bomb, true); assert.equal(i.sample().bomb, false);
   i.button(11, 'dash'); i.reset(); assert.equal(i.sample().dash, false);
 });
+
+const { AudioManager, musicTracks } = require(path.join(temp, 'game/Audio.js'));
+test('music unlock, pause, track changes, rejected playback and recovery', async () => {
+  const oldAudio = globalThis.Audio, oldDocument = globalThis.document;
+  const media = [];
+  class FakeAudio {
+    paused = true; volume = 1; muted = false; calls = 0; fail = false;
+    constructor() { media.push(this); }
+    setAttribute() {} addEventListener() {} removeAttribute() {} load() {}
+    play() { this.calls++; if (this.fail) return Promise.reject({ name: 'NotAllowedError' }); this.paused = false; return Promise.resolve(); }
+    pause() { this.paused = true; }
+  }
+  globalThis.Audio = FakeAudio; globalThis.document = { baseURI: 'https://example.test/neo-defender/' };
+  const flush = async () => { for (let n = 0; n < 5; n++) await Promise.resolve(); };
+  const manager = new AudioManager(freshSave().settings);
+  try {
+    manager.unlock(); assert.equal(media[0].calls, 1); assert.match(media[0].src, /neo-defender\/audio\/title.wav$/);
+    await flush(); manager.update(.1); assert.equal(manager.status, 'playing');
+    manager.muted = true; manager.update(.1); assert.equal(media[0].paused, true); assert.equal(manager.status, 'paused');
+    manager.muted = false; await flush(); assert.equal(media[0].paused, false);
+    manager.setTrack('boss'); await flush(); assert.match(media[0].src, /boss.wav$/);
+    media[0].fail = true; media[0].pause(); manager.unlock(); await flush(); manager.update(.1); assert.equal(manager.status, 'blocked');
+    const attempts = media[0].calls; manager.update(.1); assert.equal(media[0].calls, attempts);
+    media[0].fail = false; manager.unlock(); await flush(); manager.update(.1); assert.equal(manager.status, 'playing');
+    manager.muted = true; manager.preview(); await flush(); manager.update(.1); assert.equal(media[0].muted, false);
+    manager.update(6); assert.equal(media[0].paused, true);
+    manager.context = { state: 'running', currentTime: 10, createOscillator() { throw new Error('audio unavailable'); } };
+    manager.muted = false; assert.doesNotThrow(() => manager.play('shot')); manager.context = null;
+    manager.dispose(); assert.equal(media[0].paused, true);
+  } finally { manager.context = null; manager.dispose(); globalThis.Audio = oldAudio; globalThis.document = oldDocument; }
+});
+test('all six original BGM assets contain valid, non-silent stereo PCM without clipping', () => {
+  assert.equal(Object.keys(musicTracks).length, 6);
+  for (const { file } of Object.values(musicTracks)) {
+    const wav = fs.readFileSync(path.join('public/audio', file));
+    assert.equal(wav.toString('ascii', 0, 4), 'RIFF'); assert.equal(wav.toString('ascii', 8, 12), 'WAVE');
+    assert.equal(wav.readUInt16LE(22), 2); assert.equal(wav.readUInt32LE(24), 22050); assert.equal(wav.readUInt16LE(34), 16);
+    assert.equal(wav.readUInt32LE(40), wav.length - 44);
+    let peak = 0, energy = 0;
+    for (let i = 44; i < wav.length; i += 2) { const sample = wav.readInt16LE(i) / 32768; peak = Math.max(peak, Math.abs(sample)); energy += sample * sample; }
+    assert.ok(peak > .5 && peak < .95, file); assert.ok(Math.sqrt(energy / ((wav.length - 44) / 2)) > .03, file);
+  }
+});

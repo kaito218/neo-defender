@@ -242,3 +242,23 @@ h3 span{font-size:9px}
 .toast{font-size:12px}
 
 }
+/* The launch footer never participates in the ship list's scrolling. */
+.hangar-panel{display:flex;flex-direction:column;overflow:hidden}
+.hangar-panel>header{flex-shrink:0;margin-bottom:1.4cqw}
+.hangar-content{flex:1;min-height:0;overflow:auto;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.hangar-panel{touch-action:pan-x pan-y}
+.hangar-content .ship-grid{touch-action:pan-x pan-y}
+.wingmates{margin:2cqw 0 1.5cqw}
+.hangar-launch{flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:12px;padding-top:12px;border-top:1px solid #619bab66;background:#091624;z-index:1}
+.launch-selection{display:grid;gap:4px}.launch-selection small{font-size:10px;letter-spacing:.1em;color:#9ce9dc}.launch-selection strong{font-size:18px;letter-spacing:.1em}.launch-selection>span{font-size:10px;color:#9ab5c9}
+.launch-actions{display:flex;gap:10px;align-items:center}.launch-primary{position:relative;min-width:220px;min-height:60px;padding:10px 52px 10px 22px;text-align:left;box-shadow:0 0 20px #80f1ed22}
+.launch-primary>span{display:block;font-size:19px;font-weight:800;letter-spacing:.12em}.launch-primary>small{display:block;font-size:10px;margin-top:5px;letter-spacing:.06em}.launch-primary>b{position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:25px}.new-sortie{font-size:11px;min-height:44px}
+.title-utilities{display:flex;align-items:center;justify-content:space-between;gap:8px}.title-utilities .full-button{font-size:10px;padding:9px 0;border:0;background:none;color:#a4bed0}.sound-button{font-size:10px;padding:8px 10px;border-color:#76c6d15c;color:#a6eff0;background:#132b42}
+.sound-check{display:flex;align-items:center;gap:14px;margin-top:14px}.sound-check button{font-size:12px;min-height:40px}.sound-check span{font-size:10px;color:#96b6c9}.audio-recovery{position:absolute;right:20px;top:100px;z-index:4;font-size:11px;min-height:40px;background:#0c2f45;color:#b2f5fa}
+@media(max-height:500px) and (orientation:landscape){
+  .hangar-panel{inset:8px;padding:12px}.hangar-panel>header{margin-bottom:8px}.hangar-panel h2{font-size:22px;margin:0}.hangar-panel h2 span{font-size:10px;margin-top:4px}.hangar-panel .kicker{font-size:8px;margin-bottom:3px}.hangar-panel header>button{font-size:10px;min-height:36px}
+  .hangar-content .ship-grid{grid-template-columns:repeat(5,minmax(132px,1fr));overflow-x:auto;padding-bottom:8px;gap:8px}.hangar-content .ship-card{padding:8px}.hangar-content .ship-card h3{font-size:13px}.hangar-content .ship-card small{font-size:8px}.hangar-content .ship-card p,.hangar-content .ship-spec{font-size:10px}.hangar-content .ship-preview{height:50px;margin:0;object-fit:contain}
+  .hangar-launch{margin-top:8px;padding-top:8px;gap:10px}.launch-primary{min-height:52px;min-width:190px;padding:8px 40px 8px 16px}.launch-primary>span{font-size:18px}.launch-primary>small{font-size:9px}.launch-selection strong{font-size:14px}.launch-selection small,.launch-selection>span{font-size:9px}.launch-actions{gap:6px}.new-sortie{font-size:10px;padding:8px}
+  .wingmates{margin:12px 0}.sound-check{margin-top:8px}.sound-check span{display:none}.settings-panel{overflow:auto}
+}
+@media(max-width:500px) and (orientation:portrait){.launch-primary{min-width:145px;min-height:46px;padding:8px 30px 8px 12px}.launch-primary>span{font-size:15px}.launch-primary>b{right:10px}.launch-selection strong{font-size:12px}.launch-selection small,.launch-selection>span{font-size:8px}.hangar-launch{padding-top:6px;margin-top:6px;gap:6px}.new-sortie{font-size:8px;padding:5px}.launch-actions{gap:4px}.title-utilities button{font-size:7px}}
