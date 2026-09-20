@@ -1,13 +1,15 @@
 {
-  "name": "gemini",
+  "name": "neo-defender",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && node scripts/build.mjs",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node tests/game.test.mjs",
+    "serve": "node scripts/serve.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",
